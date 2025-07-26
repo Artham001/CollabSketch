@@ -11,8 +11,19 @@ const canvas=document.getElementById('whiteboard');
 
 const ctx=canvas.getContext('2d');
 
-canvas.height=600;
-canvas.width=800;
+//canvas.height=600;
+//canvas.width=800;
+function resizeCanvas(){
+    canvas.width=canvas.offsetWidth;
+    canvas.height=canvas.offsetHeight;
+
+    ctx.lineWidth=5;
+    ctx.lineCap='round';
+    ctx.strokeStyle='black';
+}
+window.addEventListener('resize',resizeCanvas);
+resizeCanvas();
+
 
 let drawing =false;
 ctx.lineWidth=5;

@@ -1,3 +1,15 @@
+/* Media Query for mobile devices (screens smaller than 600px) */
+@media (max-width: 600px) {
+    h1 {
+        font-size: 1.5rem; /* Make the heading smaller */
+    }
+
+    canvas {
+        width: 100%; /* Use the full width on small screens */
+        border-width: 1px;
+    }
+}
+
 body{
     display: flex;
     flex-direction: column;
@@ -10,4 +22,7 @@ canvas{
     border: 2px solid black;
     background-color: white;
     cursor: crosshair;
+    width: 95%;
+    max-width: 800px;
+    aspect-ratio: 4/3;
 }
