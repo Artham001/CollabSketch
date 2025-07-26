@@ -34,6 +34,14 @@ let lastPos=null;
 
 function getMousePos(canvas, evt) {
     const rect = canvas.getBoundingClientRect();
+
+    if (evt.touches && evt.touches.length > 0) {
+        return {
+            x: evt.touches[0].clientX - rect.left,
+            y: evt.touches[0].clientY - rect.top
+        };
+    }
+
     return {
         x: evt.clientX - rect.left,
         y: evt.clientY - rect.top
@@ -53,6 +61,8 @@ function stopDrawing() {
 }
 
 function draw(e) {
+    e.preventDefault();
+    
     if (!drawing || !lastPos) return;
 
     const pos = getMousePos(canvas, e);
@@ -75,3 +85,7 @@ function draw(e) {
 canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mouseup', stopDrawing);
 canvas.addEventListener('mousemove', draw);
+
+canvas.addEventListener('touchstart',startDrawing);
+canvas.addEventListener('touchend',stopDrawing);
+canvas.addEventListener('touchmove',draw);
