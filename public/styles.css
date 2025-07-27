@@ -26,3 +26,66 @@ canvas{
     max-width: 800px;
     aspect-ratio: 4/3;
 }
+#chat-container {
+    width: 95%;
+    max-width: 800px;
+    margin-top: 20px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+}
+
+#messages {
+    list-style-type: none;
+    margin: 0;
+    padding: 10px;
+    height: 150px;
+    overflow-y: scroll;
+    border-bottom: 1px solid #ccc;
+}
+
+#chat-form {
+    display: flex;
+    padding: 5px;
+}
+
+#chat-input {
+    flex-grow: 1;
+    border: 1px solid #ccc;
+    padding: 10px;
+    font-size: 1rem;
+}
+
+#chat-form button {
+    background: #007bff;
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    cursor: pointer;
+}
+#messages li {
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    border-radius: 10px;
+    max-width: 70%;
+    word-wrap: break-word;
+}
+
+.my-message {
+    background-color: #007bff;
+    color: white;
+    align-self: flex-end; /* Aligns to the right */
+    margin-left: auto;
+}
+
+.other-message {
+    background-color: #e9e9eb;
+    color: black;
+    align-self: flex-start; /* Aligns to the left */
+}
+
+/* Add this to the #messages rule to enable alignment */
+#messages {
+    /* ... existing styles ... */
+    display: flex;
+    flex-direction: column;
+}

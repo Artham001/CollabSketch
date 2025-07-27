@@ -62,7 +62,7 @@ function stopDrawing() {
 
 function draw(e) {
     e.preventDefault();
-    
+
     if (!drawing || !lastPos) return;
 
     const pos = getMousePos(canvas, e);
@@ -89,3 +89,33 @@ canvas.addEventListener('mousemove', draw);
 canvas.addEventListener('touchstart',startDrawing);
 canvas.addEventListener('touchend',stopDrawing);
 canvas.addEventListener('touchmove',draw);
+
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const messages = document.getElementById('messages');
+
+chatForm.addEventListener('submit', (e) => {
+  
+    e.preventDefault();
+
+    if (chatInput.value) {
+         socket.emit('chat message', {
+            text: chatInput.value,
+            sender: socket.id 
+        });
+        chatInput.value = ''; // Clear the input box
+    }
+});
+socket.on('chat message', (msg) => {
+    const item = document.createElement('li');
+    item.textContent = msg.text;
+
+    if (msg.sender === socket.id) {
+        item.classList.add('my-message');
+    } else {
+        item.classList.add('other-message');
+    }
+    messages.appendChild(item);
+    // Auto-scroll to the bottom
+    messages.scrollTop = messages.scrollHeight;
+});
