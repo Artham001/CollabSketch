@@ -1,111 +1,40 @@
-const socket=io();
+const socket = io();
 
-socket.on('drawing',data=>{
+// Get all HTML elements
+const canvas = document.getElementById('whiteboard');
+const ctx = canvas.getContext('2d');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const messages = document.getElementById('messages');
+const colorPicker = document.getElementById('colorPicker');
+const brushSize = document.getElementById('brushSize');
+const eraserBtn = document.getElementById('eraserBtn');
+const clearBtn = document.getElementById('clearBtn');
+const undoBtn = document.getElementById('undoBtn');
+
+// ==================
+// State Variables
+// ==================
+let drawing = false;
+let lastPos = null;
+let drawingHistory = [];
+let currentPath = [];
+
+// ==================
+// Socket.IO Listeners (Receiving events from server)
+// ==================
+socket.on('drawing', (data) => {
+    // Set drawing style from received data
+    ctx.strokeStyle = data.color;
+    ctx.lineWidth = data.width;
+    
+    // Draw the line segment
     ctx.beginPath();
     ctx.moveTo(data.from.x, data.from.y);
     ctx.lineTo(data.to.x, data.to.y);
     ctx.stroke();
-})
-
-const canvas=document.getElementById('whiteboard');
-
-const ctx=canvas.getContext('2d');
-
-//canvas.height=600;
-//canvas.width=800;
-function resizeCanvas(){
-    canvas.width=canvas.offsetWidth;
-    canvas.height=canvas.offsetHeight;
-
-    ctx.lineWidth=5;
-    ctx.lineCap='round';
-    ctx.strokeStyle='black';
-}
-window.addEventListener('resize',resizeCanvas);
-resizeCanvas();
-
-
-let drawing =false;
-ctx.lineWidth=5;
-ctx.lineCap='round';
-ctx.strokeStyle = 'black';
-
-let lastPos=null;
-
-function getMousePos(canvas, evt) {
-    const rect = canvas.getBoundingClientRect();
-
-    if (evt.touches && evt.touches.length > 0) {
-        return {
-            x: evt.touches[0].clientX - rect.left,
-            y: evt.touches[0].clientY - rect.top
-        };
-    }
-
-    return {
-        x: evt.clientX - rect.left,
-        y: evt.clientY - rect.top
-    };
-}
-
-function startDrawing(e) {
-    drawing = true;
-    const pos = getMousePos(canvas, e);
-    lastPos=pos;
-}
-
-function stopDrawing() {
-    drawing = false;
-    lastPos=null;
-    ctx.beginPath()
-}
-
-function draw(e) {
-    e.preventDefault();
-
-    if (!drawing || !lastPos) return;
-
-    const pos = getMousePos(canvas, e);
-
-    // Draw the line locally
-    ctx.beginPath(); // Start a new path for each segment
-    ctx.moveTo(lastPos.x, lastPos.y);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke()
-
-    // Emit the drawing data to the server
-    socket.emit('drawing', {
-        from: lastPos,
-        to: pos
-    });
-    lastPos=pos;
-}
-
-// Event Listeners
-canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mouseup', stopDrawing);
-canvas.addEventListener('mousemove', draw);
-
-canvas.addEventListener('touchstart',startDrawing);
-canvas.addEventListener('touchend',stopDrawing);
-canvas.addEventListener('touchmove',draw);
-
-const chatForm = document.getElementById('chat-form');
-const chatInput = document.getElementById('chat-input');
-const messages = document.getElementById('messages');
-
-chatForm.addEventListener('submit', (e) => {
-  
-    e.preventDefault();
-
-    if (chatInput.value) {
-         socket.emit('chat message', {
-            text: chatInput.value,
-            sender: socket.id 
-        });
-        chatInput.value = ''; // Clear the input box
-    }
 });
+
 socket.on('chat message', (msg) => {
     const item = document.createElement('li');
     item.textContent = msg.text;
@@ -116,6 +45,159 @@ socket.on('chat message', (msg) => {
         item.classList.add('other-message');
     }
     messages.appendChild(item);
-    // Auto-scroll to the bottom
     messages.scrollTop = messages.scrollHeight;
 });
+
+socket.on('clear canvas', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawingHistory = []; // Also clear the history for remote clears
+});
+
+// ==================
+// Event Listeners (Handling user actions)
+// ==================
+
+// Tool listeners
+colorPicker.addEventListener('change', (e) => {
+    ctx.strokeStyle = e.target.value;
+});
+
+brushSize.addEventListener('change', (e) => {
+    ctx.lineWidth = e.target.value;
+});
+
+eraserBtn.addEventListener('click', () => {
+    ctx.strokeStyle = '#ffffff'; // Set color to white for erasing
+});
+
+clearBtn.addEventListener('click', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawingHistory = [];
+    socket.emit('clear canvas');
+});
+
+undoBtn.addEventListener('click', () => {
+    if (drawingHistory.length > 0) {
+        drawingHistory.pop(); // Remove the last path
+        redrawCanvas();
+    }
+});
+
+// Canvas listeners
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseleave', stopDrawing); // Stop drawing if mouse leaves canvas
+
+canvas.addEventListener('touchstart', startDrawing);
+canvas.addEventListener('touchend', stopDrawing);
+canvas.addEventListener('touchmove', draw);
+
+// Chat listener
+chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (chatInput.value) {
+        socket.emit('chat message', {
+            text: chatInput.value,
+            sender: socket.id
+        });
+        chatInput.value = '';
+    }
+});
+
+// Window resize listener
+window.addEventListener('resize', resizeCanvas);
+
+// ==================
+// Functions
+// ==================
+
+function resizeCanvas() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    redrawCanvas(); // Redraw the history on resize
+}
+
+function getMousePos(canvas, evt) {
+    const rect = canvas.getBoundingClientRect();
+    if (evt.touches && evt.touches.length > 0) {
+        return {
+            x: evt.touches[0].clientX - rect.left,
+            y: evt.touches[0].clientY - rect.top
+        };
+    }
+    return {
+        x: evt.clientX - rect.left,
+        y: evt.clientY - rect.top
+    };
+}
+
+function startDrawing(e) {
+    drawing = true;
+    const pos = getMousePos(canvas, e);
+    lastPos = pos;
+    currentPath = []; // Start a new path
+}
+
+function stopDrawing() {
+    if (drawing) {
+        drawing = false;
+        if (currentPath.length > 0) {
+            drawingHistory.push(currentPath); // Save the completed path
+        }
+        lastPos = null;
+        ctx.beginPath();
+    }
+}
+
+function draw(e) {
+    e.preventDefault();
+    if (!drawing || !lastPos) return;
+
+    const pos = getMousePos(canvas, e);
+    const lineData = {
+        from: lastPos,
+        to: pos,
+        color: ctx.strokeStyle,
+        width: ctx.lineWidth
+    };
+
+    // Draw locally
+    ctx.beginPath();
+    ctx.moveTo(lineData.from.x, lineData.from.y);
+    ctx.lineTo(lineData.to.x, lineData.to.y);
+    ctx.stroke();
+
+    // Add segment to the current path for history
+    currentPath.push(lineData);
+
+    // Emit the drawing data to the server
+    socket.emit('drawing', lineData);
+    lastPos = pos;
+}
+
+function redrawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawingHistory.forEach(path => {
+        // Set the style for each path before drawing
+        const firstSegment = path[0];
+        if (!firstSegment) return;
+        
+        ctx.strokeStyle = firstSegment.color;
+        ctx.lineWidth = firstSegment.width;
+        
+        ctx.beginPath();
+        ctx.moveTo(firstSegment.from.x, firstSegment.from.y);
+        
+        path.forEach(segment => {
+            ctx.lineTo(segment.to.x, segment.to.y);
+        });
+        ctx.stroke();
+    });
+    // Restore the current drawing style
+    ctx.strokeStyle = colorPicker.value;
+    ctx.lineWidth = brushSize.value;
+}
+
+// Initial setup call
+resizeCanvas();

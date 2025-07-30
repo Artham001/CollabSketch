@@ -8,6 +8,19 @@
 </head>
 <body>
     <h1>My WhiteBoard</h1>
+    
+      <div class="toolbar">
+        <label for="colorPicker">Color:</label>
+        <input type="color" id="colorPicker" value="#000000">
+
+        <label for="brushSize">Size:</label>
+        <input type="range" id="brushSize" min="1" max="50" value="5">
+
+        <button id="eraserBtn">Eraser</button>
+        <button id="clearBtn">Clear All</button>
+        <button id="undoBtn">Undo</button>
+    </div>
+
     <canvas id="whiteboard"></canvas>
 
     

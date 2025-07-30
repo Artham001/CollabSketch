@@ -21,9 +21,14 @@ io.on('connection', (socket) => {
     });
     socket.on('chat message', (msg) => {
         io.emit('chat message', msg);
-});
+    });
+    // Add this inside io.on('connection', ...) in server.js
+    socket.on('clear canvas', () => {
+        socket.broadcast.emit('clear canvas');
+    });
 });
 
 server.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
 });
+
