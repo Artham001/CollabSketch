@@ -131,3 +131,9 @@ canvas{
 .toolbar button:hover {
     background-color: #dcdcdc;
 }
+
+.toolbar button.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+}

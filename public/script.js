@@ -19,16 +19,15 @@ let drawing = false;
 let lastPos = null;
 let drawingHistory = [];
 let currentPath = [];
+let isErasing = false;
 
 // ==================
 // Socket.IO Listeners (Receiving events from server)
 // ==================
 socket.on('drawing', (data) => {
-    // Set drawing style from received data
     ctx.strokeStyle = data.color;
     ctx.lineWidth = data.width;
     
-    // Draw the line segment
     ctx.beginPath();
     ctx.moveTo(data.from.x, data.from.y);
     ctx.lineTo(data.to.x, data.to.y);
@@ -50,7 +49,7 @@ socket.on('chat message', (msg) => {
 
 socket.on('clear canvas', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawingHistory = []; // Also clear the history for remote clears
+    drawingHistory = [];
 });
 
 // ==================
@@ -59,7 +58,9 @@ socket.on('clear canvas', () => {
 
 // Tool listeners
 colorPicker.addEventListener('change', (e) => {
+    isErasing = false;
     ctx.strokeStyle = e.target.value;
+    eraserBtn.classList.remove('active');
 });
 
 brushSize.addEventListener('change', (e) => {
@@ -67,7 +68,8 @@ brushSize.addEventListener('change', (e) => {
 });
 
 eraserBtn.addEventListener('click', () => {
-    ctx.strokeStyle = '#ffffff'; // Set color to white for erasing
+    isErasing = !isErasing; // Toggle the erasing state
+    eraserBtn.classList.toggle('active'); // Toggle the '.active' class
 });
 
 clearBtn.addEventListener('click', () => {
@@ -78,7 +80,7 @@ clearBtn.addEventListener('click', () => {
 
 undoBtn.addEventListener('click', () => {
     if (drawingHistory.length > 0) {
-        drawingHistory.pop(); // Remove the last path
+        drawingHistory.pop();
         redrawCanvas();
     }
 });
@@ -87,7 +89,7 @@ undoBtn.addEventListener('click', () => {
 canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mouseup', stopDrawing);
 canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseleave', stopDrawing); // Stop drawing if mouse leaves canvas
+canvas.addEventListener('mouseleave', stopDrawing);
 
 canvas.addEventListener('touchstart', startDrawing);
 canvas.addEventListener('touchend', stopDrawing);
@@ -115,7 +117,7 @@ window.addEventListener('resize', resizeCanvas);
 function resizeCanvas() {
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
-    redrawCanvas(); // Redraw the history on resize
+    redrawCanvas();
 }
 
 function getMousePos(canvas, evt) {
@@ -136,14 +138,14 @@ function startDrawing(e) {
     drawing = true;
     const pos = getMousePos(canvas, e);
     lastPos = pos;
-    currentPath = []; // Start a new path
+    currentPath = [];
 }
 
 function stopDrawing() {
     if (drawing) {
         drawing = false;
         if (currentPath.length > 0) {
-            drawingHistory.push(currentPath); // Save the completed path
+            drawingHistory.push(currentPath);
         }
         lastPos = null;
         ctx.beginPath();
@@ -155,23 +157,26 @@ function draw(e) {
     if (!drawing || !lastPos) return;
 
     const pos = getMousePos(canvas, e);
+    
+    const colorToUse = isErasing ? '#ffffff' : colorPicker.value;
+
     const lineData = {
         from: lastPos,
         to: pos,
-        color: ctx.strokeStyle,
-        width: ctx.lineWidth
+        color: colorToUse,
+        width: brushSize.value
     };
 
-    // Draw locally
+    ctx.strokeStyle = lineData.color;
+    ctx.lineWidth = lineData.width;
+
     ctx.beginPath();
     ctx.moveTo(lineData.from.x, lineData.from.y);
     ctx.lineTo(lineData.to.x, lineData.to.y);
     ctx.stroke();
 
-    // Add segment to the current path for history
     currentPath.push(lineData);
 
-    // Emit the drawing data to the server
     socket.emit('drawing', lineData);
     lastPos = pos;
 }
@@ -179,7 +184,6 @@ function draw(e) {
 function redrawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawingHistory.forEach(path => {
-        // Set the style for each path before drawing
         const firstSegment = path[0];
         if (!firstSegment) return;
         
@@ -194,7 +198,7 @@ function redrawCanvas() {
         });
         ctx.stroke();
     });
-    // Restore the current drawing style
+
     ctx.strokeStyle = colorPicker.value;
     ctx.lineWidth = brushSize.value;
 }
